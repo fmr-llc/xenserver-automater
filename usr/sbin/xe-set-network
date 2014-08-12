@@ -9,15 +9,25 @@ NM=`$XENSTOREREAD vm-data/nm`
 NS=`$XENSTOREREAD vm-data/ns`
 DM=`$XENSTOREREAD vm-data/dm`
 
-[ "$IP" = "" ] && exit 0
+[ "$IP" = "" ] && (
+
+	cat <<'EOF' > /etc/network/interfaces.d/eth0
+# The primary network interface
+auto eth0
+iface eth0 inet dhcp
+EOF
+
+	ifdown eth0
+	ifup eth0
+
+	exit 0
+)
+
 [ "$GW" = "" ] && exit 0
 [ "$NM" = "" ] && exit 0
 [ "$NS" = "" ] && exit 0
 
-cat << EOF > /etc/network/interfaces
-auto lo
-iface lo inet loopback
-
+cat << EOF > /etc/network/interfaces.d/eth0
 auto eth0
 iface eth0 inet static
         address $IP
@@ -27,9 +37,10 @@ iface eth0 inet static
 EOF
 
 if [ ! "$DM" = "" ]; then
-  echo "        dns-search $DM" >> /etc/network/interfaces
+  echo "        dns-search $DM" >> /etc/network/interfaces.d/eth0
 fi
 
-/etc/init.d/networking restart
+ifdown eth0
+ifup eth0
 
 exit 0
